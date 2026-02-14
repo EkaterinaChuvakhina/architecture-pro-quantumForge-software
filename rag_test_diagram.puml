@@ -1,0 +1,30 @@
+@startuml
+actor Evaluator as "Evaluation Script"
+participant Retriever as "Retriever\n(FAISS + Reranker)"
+participant Filter as "Chunk Filter"
+participant LLM as "GigaChat\n(генерация ответов)"
+participant RagasJudge as "Ragas Judge LLM\n(GigaChat)"
+participant Ragas as "Ragas Framework"
+
+Evaluator -> Evaluator: Загрузка golden questions
+
+loop Для каждого вопроса
+    Evaluator -> Retriever: invoke(question)
+    Retriever --> Evaluator: docs
+
+    Evaluator -> Filter: Фильтрация чанков
+    Filter --> Evaluator: отфильтрованные docs
+
+    Evaluator -> Evaluator: Формирование промпта
+    Evaluator -> LLM: invoke(prompt)
+    LLM --> Evaluator: answer
+
+    Evaluator -> Evaluator: Сохранение в dataset\n(question, answer, contexts, ground_truth)
+end
+
+Evaluator -> Ragas: evaluate(dataset, metrics)
+Ragas -> RagasJudge: Оценка примеров
+RagasJudge --> Ragas: Метрики
+Ragas --> Evaluator: result
+Evaluator -> Evaluator: Сохранение CSV
+@enduml

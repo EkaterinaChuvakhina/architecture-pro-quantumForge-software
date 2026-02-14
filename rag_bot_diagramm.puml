@@ -1,0 +1,48 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+
+left to right direction
+skinparam dpi 300
+
+title Автоматическое обновление FAISS-индекса
+
+actor "Cron\n(планировщик)" as cron #LightBlue
+
+folder "knowledge_base\n(папка с .txt файлами)" as kb #LightGreen
+
+component "update_index.py\n(скрипт обновления)" as script #LightYellow {
+  [1. Детекция изменений\n(hash + mtime)] as detect
+  [2. Сплиттинг на чанки] as chunk
+  [3. Эмбеддинги\n(BAAI/bge-m3)] as embed
+  [4. Обновление индекса] as update_index
+}
+
+database "faiss_index\n(FAISS векторный индекс)" as index #LightCoral
+
+file "update_index_log.txt\n(логи)" as logfile #LightGray
+
+file "faiss_state.json\n(состояние)" as state #LightGray
+
+cron --> script : Запуск по расписанию\n(каждые N минут)
+
+kb --> detect : Сканирование файлов
+detect --> chunk
+chunk --> embed
+embed --> update_index
+update_index --> index : Incremental update
+
+script --> logfile : Запись логов\n(время, чанки, размер, ошибки)
+script --> state : Чтение / запись состояния
+
+note bottom of logfile
+  Логи хранятся в текстовом файле
+  в корне проекта
+end note
+
+note bottom of cron
+  Задача запускается автоматически
+  через системный cron
+end note
+
+@enduml
